@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/HaxL0p4/Password-Analyzer/blob/main/img/pass.png" alt="Password Analyzer" width="300" />
+  <img src="https://github.com/HaxL0p4/Password-Analyzer/blob/main/img/pass.png" alt="Password Analyzer" width="800" />
 </p>
 
 <h1 align="center">Password Analyzer</h1>
