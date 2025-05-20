@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Password Analyzer | By L0pa</title>
+<style>
+  * {
+    box-sizing: border-box;
+    font-family: 'Courier New', monospace;
+    color: #00ff99;
+  }
+  body {
+    margin: 0;
+    padding: 40px 20px 80px;
+    background-color: #0d0d0d;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+  }
+  h1 {
+    margin-top: 30px;
+    font-size: 2em;
+    color: #00ff99;
+    text-shadow: 0 0 5px #00ff99;
+  }
+  #passwordInput {
+    margin: 20px 0 30px;
+    padding: 15px;
+    border: none;
+    width: 100%;
+    max-width: 500px;
+    font-size: 1.2em;
+    background: rgba(0, 255, 153, 0.05);
+    color: #00ff99;
+    border-radius: 15px;
+    min-width: 300px;
+    outline: none;
+    box-shadow: 0 0 10px rgba(0, 255, 153, 0.4);
+  }
+  #result {
+    width: 100%;
+    max-width: 600px;
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid #00ff9970;
+    padding: 25px 20px;
+    border-radius: 15px;
+    box-shadow: 0 0 15px rgba(0, 255, 153, 0.2);
+    position: relative;
+    user-select: text;
+  }
+  #result p {
+    margin: 12px 0;
+    font-size: 1em;
+  }
+  .score {
+    font-weight: bold;
+  }
+  .leak-safe {
+    color: #00ff99;
+    font-weight: bold;
+  }
+  .leak-found {
+    color: #ff0055;
+    font-weight: bold;
+  }
+  .hash-box {
+    margin: 15px 0;
+    background-color: rgba(0, 255, 153, 0.05);
+    border-left: 3px solid #00ff99;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    word-break: break-word;
+  }
+  #copyContainer {
+    margin: 12px 0 20px;
+    text-align: center;
+    display: none;
+  }
+  #copyBtn {
+    padding: 6px 14px;
+    background-color: rgba(0, 255, 153, 0.1);
+    border: 1px solid #00ff99;
+    color: #00ff99;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: 0.2s;
+  }
+  #copyBtn:hover {
+    background-color: rgba(0, 255, 153, 0.2);
+  }
+  #terminal {
+    width: 100%;
+    max-width: 700px;
+    background-color: rgba(0, 0, 0, 0.75);
+    margin-top: 40px;
+    border: 1px solid #00ff9970;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 0 20px rgba(0, 255, 153, 0.3);
+    display: flex;
+    flex-direction: column;
+    height: 320px;
+  }
+  #terminalOutput {
+    flex: 1;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    margin-bottom: 12px;
+    padding-right: 6px;
+    line-height: 1.3em;
+  }
+  #terminalInputWrapper {
+    display: flex;
+    align-items: center;
+  }
+  #terminalPrompt {
+    font-weight: bold;
+    margin-right: 6px;
+    user-select: none;
+  }
+  #terminalInput {
+    flex: 1;
+    border: none;
+    background: transparent;
+    border-top: 1px solid #00ff99;
+    padding: 8px 10px 6px;
+    color: #00ff99;
+    font-size: 1em;
+    outline: none;
+    font-family: 'Courier New', monospace;
+  }
+  .footer {
+    margin-top: auto;
+    margin-top: 15px;
+    text-align: center;
+    color: white;
+    font-size: 0.8em;
+    opacity: 0.7;
+  }
+  .footer a {
+    color: white;
+    text-decoration: none;
+    margin-left: 10px;
+  }
+</style>
+</head>
+<body>
+  <h1>Password Analyzer</h1>
+  <input type="text" id="passwordInput" placeholder="Enter a password...">
+  <div id="result">
+    <p>Strength: <span class="score" id="strength">-</span></p>
+    <p>Estimated entropy: <span id="entropy">-</span> bits</p>
+    <p>Estimated brute force time: <span id="time">-</span></p>
+
+    <div class="hash-box">
+      <strong>SHA-256:</strong><br>
+      <span id="hash">-</span>
+    </div>
+
+    <div id="copyContainer">
+      <button id="copyBtn">📋 Copy SHA-256</button>
+    </div>
+
+    <p>💥 Leak status: <span id="leak">-</span></p>
+  </div>
+
+  <div id="terminal">
+    <div id="terminalOutput">[Security Terminal Ready... Type "help"]</div>
+    <div id="terminalInputWrapper">
+      <span id="terminalPrompt">$</span>
+      <input type="text" id="terminalInput" autocomplete="off" autofocus placeholder="Command...">
+    </div>
+  </div>
+
+  <div class="footer">
+    by L0PA — <a href="https://github.com/HaxL0p4" target="_blank" rel="noopener noreferrer">GitHub</a>
+  </div>
+
+<script>
+  const input = document.getElementById('passwordInput');
+  const strengthText = document.getElementById('strength');
+  const entropyText = document.getElementById('entropy');
+  const timeText = document.getElementById('time');
+  const hashText = document.getElementById('hash');
+  const leakText = document.getElementById('leak');
+  const copyBtn = document.getElementById('copyBtn');
+  const copyContainer = document.getElementById('copyContainer');
+  const terminalInput = document.getElementById('terminalInput');
+  const terminalOutput = document.getElementById('terminalOutput');
+
+  let lastPassword = '';
+
+  const charsetSize = password => {
+    let size = 0;
+    if (/[a-z]/.test(password)) size += 26;
+    if (/[A-Z]/.test(password)) size += 26;
+    if (/[0-9]/.test(password)) size += 10;
+    if (/[^a-zA-Z0-9]/.test(password)) size += 32;
+    return size;
+  };
+
+  const estimateEntropy = password => {
+    if (!password) return 0;
+    const charset = charsetSize(password);
+    return Math.round(Math.log2(Math.pow(charset, password.length)));
+  };
+
+  const bruteForceTime = bits => {
+    const guesses = Math.pow(2, bits);
+    const guessesPerSecond = 1e9;
+    const seconds = guesses / guessesPerSecond;
+    if (seconds < 1) return 'less than 1 second';
+    const mins = seconds / 60;
+    const hours = mins / 60;
+    const days = hours / 24;
+    const years = days / 365;
+    if (years > 100) return '> 100 years';
+    if (years >= 1) return `${years.toFixed(1)} years`;
+    if (days >= 1) return `${days.toFixed(1)} days`;
+    if (hours >= 1) return `${hours.toFixed(1)} hours`;
+    if (mins >= 1) return `${mins.toFixed(1)} minutes`;
+    return `${seconds.toFixed(0)} seconds`;
+  };
+
+  const getStrength = bits => {
+    if (bits < 30) return 'Very Weak';
+    if (bits < 50) return 'Weak';
+    if (bits < 70) return 'Good';
+    if (bits < 90) return 'Strong';
+    return 'Very Strong';
+  };
+
+  async function sha256(password) {
+    const enc = new TextEncoder().encode(password);
+    const buffer = await crypto.subtle.digest('SHA-256', enc);
+    return [...new Uint8Array(buffer)].map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  async function sha1(password) {
+    const enc = new TextEncoder().encode(password);
+    const buffer = await crypto.subtle.digest('SHA-1', enc);
+    return [...new Uint8Array(buffer)].map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+  }
+
+  async function checkHIBP(password) {
+    if (password.length < 5) {
+      leakText.textContent = '-';
+      leakText.className = '';
+      return;
+    }
+    const hash = await sha1(password);
+    const prefix = hash.slice(0, 5);
+    const suffix = hash.slice(5);
+    try {
+      const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`);
+      const text = await res.text();
+      const lines = text.split('\n');
+      const found = lines.find(line => line.startsWith(suffix));
+      if (found) {
+        leakText.textContent = '⚠️ Found in a data breach!';
+        leakText.className = 'leak-found';
+      } else {
+        leakText.textContent = '✅ Not Found in a data breach!';
+        leakText.className = 'leak-safe';
+      }
+    } catch (err) {
+      leakText.textContent = 'Leak check error';
+      leakText.className = 'leak-found';
+    }
+  }
+
+  input.addEventListener('input', async () => {
+    const pwd = input.value;
+    lastPassword = pwd;
+    const entropy = estimateEntropy(pwd);
+    const time = bruteForceTime(entropy);
+    const strength = getStrength(entropy);
+    const hash = pwd ? await sha256(pwd) : '-';
+
+    strengthText.textContent = strength;
+    entropyText.textContent = entropy;
+    timeText.textContent = time;
+    hashText.textContent = hash;
+
+    if (pwd.length > 0) {
+      copyContainer.style.display = 'block';
+    } else {
+      copyContainer.style.display = 'none';
+      leakText.textContent = '-';
+      leakText.className = '';
+    }
+
+    checkHIBP(pwd);
+  });
+
+  copyBtn.addEventListener('click', () => {
+    const text = hashText.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      copyBtn.textContent = '✅ Copiato!';
+      setTimeout(() => {
+        copyBtn.textContent = '📋 Copy SHA-256';
+      }, 1500);
+    });
+  });
+
+  function generatePassword(length = 16) {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+[]{}|;:,.<>?';
+    let pass = '';
+    for(let i = 0; i < length; i++) {
+      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return pass;
+  }
+
+  terminalInput.addEventListener('keydown', async e => {
+    if (e.key === 'Enter') {
+      const cmd = terminalInput.value.trim().toLowerCase();
+      let response = '';
+      if (!lastPassword && cmd !== 'help' && cmd !== 'suggest' && cmd !== 'clear') {
+        response = '⚠️ Enter a password above first.';
+      } else {
+        switch (cmd) {
+          case 'entropy':
+            response = `Entropy: ${estimateEntropy(lastPassword)} bit`;
+            break;
+          case 'hash':
+            response = `SHA-256: ${await sha256(lastPassword)}`;
+            break;
+          case 'leak':
+            {
+              const hash = await sha1(lastPassword);
+              const prefix = hash.slice(0, 5);
+              const suffix = hash.slice(5);
+              try {
+                const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`);
+                const text = await res.text();
+                const foundLine = text.split('\n').find(line => line.startsWith(suffix));
+                response = foundLine ? '⚠️ Found in a data breach!' : '✅ No leaks found.';
+              } catch {
+                response = 'Leak check error.';
+              }
+            }
+            break;
+          case 'breachcount':
+            {
+              const hash = await sha1(lastPassword);
+              const prefix = hash.slice(0, 5);
+              const suffix = hash.slice(5);
+              try {
+                const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`);
+                const text = await res.text();
+                const foundLine = text.split('\n').find(line => line.startsWith(suffix));
+                if (foundLine) {
+                  const count = parseInt(foundLine.split(':')[1]);
+                  response = `⚠️ Password found ${count} times in leaks.`;
+                } else {
+                  response = '✅ No leaks found.';
+                }
+              } catch {
+                response = 'Leak check error.';
+              }
+            }
+            break;
+          case 'suggest':
+            response = `Secure Password Tip: ${generatePassword(16)}`;
+            break;
+          case 'clear':
+            terminalOutput.textContent = '';
+            terminalInput.value = '';
+            return;
+          case 'help':
+            response = `Available commands:\n- entropy: show password entropy\n- hash: show SHA-256\n- leak: check for leaks\n- breachcount: how many times leaked\n- suggest: generate strong password\n- clear: clear terminal\n- help: show commands`;
+            break;
+          default:
+            response = `Unrecognized command: "${cmd}". Type "help" for assistance.`;
+        }
+      }
+      terminalOutput.textContent += `\n$ ${cmd}\n${response}`;
+      terminalOutput.scrollTop = terminalOutput.scrollHeight;
+      terminalInput.value = '';
+    }
+  });
+</script>
+</body>
+</html>
